@@ -9,6 +9,7 @@ public class Main {
                 if ("Windows".equals(info.getName())) {
                     javax.swing.UIManager.setLookAndFeel(info.getClassName());
                     break;
+                    
                 }
             }
         } catch (ClassNotFoundException ex) {
