@@ -7,18 +7,19 @@ import javax.swing.*;
 public class FrontBoard extends JFrame implements ActionListener {
 
     //Constantes
-    private static String RED_PLAYER;
+    private String redName;
     private static final char RED_CHAR = 'O';
-    private static String BLUE_PLAYER;
-    private static final char BLUE_CHAR = 'X';
-    private static String GREEN_PLAYER;
-    private static final char GREEN_CHAR = 'Z';
+    private String blueName;
+    private final char BLUE_CHAR = 'X';
+    private String greenName;
+    private final char GREEN_CHAR = 'Z';
 
-    private static int winingNeed;
-    private static int players;
+    public char BOT_CHAR;
+    public String botName;
 
-    public final char BOT_CHAR;
-    public final String BOT_PLAYER;
+    private int winingNeed;
+    private int players;
+    private boolean botOn;
 
     private static final Icon RED_CIRCLE = new ImageIcon("src/Img/red.png");
     private static final Icon BLUE_CIRCLE = new ImageIcon("src/Img/blue.png");
@@ -26,13 +27,12 @@ public class FrontBoard extends JFrame implements ActionListener {
     private static final Icon CROSS_ICON = new ImageIcon("src/Img/cruz.png");
     private static final Icon BOARD_SQUARE = new ImageIcon("src/Img/board.png");
 
-    //**RECORDATORIO** Buscar la forma de hacer un metodo para todo lo que tenga que ver con turno % 2 para simplificar el codigo
-    public static int bluePlayer = 0;
-    public static int redPlayer = 0;
-    public static int greenPlayer = 0;
-    public static int match = 1;
-    public static String whoseTurn;
-    public static String firstTurn;
+    public int bluePlayer = 0;
+    public int redPlayer = 0;
+    public int greenPlayer = 0;
+    public int match = 1;
+    public String whoseTurn;
+    public String firstTurn;
 
     // dimension del tablero
     private int columnas;
@@ -41,64 +41,74 @@ public class FrontBoard extends JFrame implements ActionListener {
     //Match Flags---------------------------------
     private int tokenCounter; //Flag para el numero de fichas utilizadas
     private int[] rowHeight; //Esta array es un flag para la altura de la ficha la columna a jugar   
-    private int turno;
+    private int turnCounter;
 
     //Componentes
     private MyPanel panels[];
     private JPanel header;
-    public JButton reiniciar;
-    public JButton modificarTablero;
+    public JButton buttonReset;
+    public JButton buttonModify;
 
     private JLabel[] token;
     private JLabel[][] board;
     private JLabel[] cross;
 
-    private JLabel pantallaTurno;
-    private JLabel pantallaContTurno;
-    private JLabel pantallaJugadorX;
-    private JLabel pantallaJugadorO;
-    private JLabel pantallaJugadorZ;
+    private JLabel screenTurn;
+    private JLabel screenTurnCounter;
+    private JLabel screenBluePlayer;
+    private JLabel screenRedPlayer;
+    private JLabel screenGreenPlayer;
 
     //OBJETOS PROPIOS
     BackBoard backBoard;
-    Inicio inicio;
+    Settings settings;
     Bot bot;
 
     //Cursor
     private Cursor cursor;
 
     //-----------------CONSTRUCTOR----------------//
-    public FrontBoard(Inicio inicio, BackBoard backBoard, int columnas, int filas, int win, boolean restart) {
-        this.inicio = inicio;
-        this.backBoard = backBoard;
-        this.backBoard.setBoardDimension(columnas, filas);
-        this.columnas = columnas;
-        this.filas = filas;
-        this.winingNeed = win;
-        this.turno = 0;
-
+    public FrontBoard() {
         this.cursor = new Cursor(Cursor.HAND_CURSOR);
-        this.rowHeight = new int[columnas];
-        this.bot = null;
-
-        if (players == 2) {
-            this.BOT_CHAR = RED_CHAR;
-            this.BOT_PLAYER = RED_PLAYER;
-        } else {
-            this.BOT_CHAR = GREEN_CHAR;
-            this.BOT_PLAYER = GREEN_PLAYER;
-        }
-
         // FRAME
         setLayout(null);
-        setBounds(0, 0, columnas * 50 + 50, 185 + filas * 50);
-        setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setResizable(false);
         setTitle("Tablero 4 en Linea");
         this.getContentPane().setBackground(Color.white);
         ImageIcon icono = new ImageIcon("src/img/icono.png");
         setIconImage(icono.getImage());
+        setLocationRelativeTo(null);
+    }
+
+    public void components(int columnas, int filas, int winTokens, boolean restart, boolean botOn) {
+        //restart
+        //if true -> resets the board within the current match
+        //if false -> resets the board and inits a new match with diferent first turn player
+
+        getContentPane().removeAll();
+        repaint();
+
+        backBoard.setBoardDimension(columnas, filas);
+        backBoard.setTokensNeeded(winTokens);
+
+        setBounds(0, 0, columnas * 50 + 50, 185 + filas * 50);
+        setLocationRelativeTo(null);
+
+        this.columnas = columnas;
+        this.filas = filas;
+        this.winingNeed = winTokens;
+        this.botOn = botOn;
+        this.turnCounter = 0;
+        this.rowHeight = new int[columnas];
+
+        if (players == 2 && botOn) {
+            BOT_CHAR = RED_CHAR;
+            botName = redName;
+        } else if (botOn) {
+            BOT_CHAR = GREEN_CHAR;
+            botName = greenName;
+        }
 
         //Winner icons
         cross = new JLabel[winingNeed];
@@ -109,6 +119,7 @@ public class FrontBoard extends JFrame implements ActionListener {
         }
 
         //Fichas
+        tokenCounter = 0;
         token = new JLabel[(columnas * filas)];
 
         for (int i = 0; i < (columnas * filas); i++) {
@@ -131,63 +142,68 @@ public class FrontBoard extends JFrame implements ActionListener {
         }
 
         //botones
-        reiniciar = new JButton("Reiniciar");
-        reiniciar.setBounds(17, 5, 90, 30);
-        reiniciar.setVisible(true);
-        reiniciar.addActionListener(this);
-        add(reiniciar);
+        buttonReset = new JButton("Reiniciar");
+        buttonReset.setBounds(17, 5, 90, 30);
+        buttonReset.setVisible(true);
+        buttonReset.addActionListener(this);
+        add(buttonReset);
 
-        modificarTablero = new JButton("Modificar");
-        modificarTablero.setBounds(117, 5, 90, 30);
-        modificarTablero.setVisible(true);
-        modificarTablero.addActionListener(this);
-        add(modificarTablero);
+        buttonModify = new JButton("Modificar");
+        buttonModify.setBounds(117, 5, 90, 30);
+        buttonModify.setVisible(true);
+        buttonModify.addActionListener(this);
+        add(buttonModify);
 
         // Labels     
-        pantallaContTurno = new JLabel();
-        pantallaContTurno.setBounds(17, 30, 180, 30);
-        pantallaContTurno.setFont(new Font("Arial", 1, 12));
-        pantallaContTurno.setForeground(Color.black);
-        add(pantallaContTurno);
+        screenTurnCounter = new JLabel();
+        screenTurnCounter.setBounds(17, 30, 180, 30);
+        screenTurnCounter.setFont(new Font("Arial", 1, 12));
+        screenTurnCounter.setForeground(Color.black);
+        add(screenTurnCounter);
+        JLabel screenMatchCounter = new JLabel("Partida Nro: " + match);
+        screenMatchCounter.setBounds(17, 50, 180, 30);
+        screenMatchCounter.setFont(new Font("Arial", 1, 12));
+        screenMatchCounter.setForeground(Color.black);
+        add(screenMatchCounter);
 
-        pantallaTurno = new JLabel();
-        pantallaTurno.setBounds(17, 80, 300, 30);
-        pantallaTurno.setFont(new Font("Arial", 1, 16));
-        add(pantallaTurno);
+        screenTurn = new JLabel();
+        screenTurn.setBounds(17, 80, 300, 30);
+        screenTurn.setFont(new Font("Arial", 1, 16));
+        add(screenTurn);
 
-        pantallaJugadorX = new JLabel(BLUE_PLAYER + ": " + bluePlayer);
-        pantallaJugadorX.setBounds(215, 0, 180, 30);
-        pantallaJugadorX.setFont(new Font("Arial", 1, 14));
-        pantallaJugadorX.setForeground(Color.blue);
-        add(pantallaJugadorX);
+        screenBluePlayer = new JLabel(blueName + ": " + bluePlayer);
+        screenBluePlayer.setBounds(215, 0, 180, 30);
+        screenBluePlayer.setFont(new Font("Arial", 1, 14));
+        screenBluePlayer.setForeground(Color.blue);
+        add(screenBluePlayer);
 
-        pantallaJugadorO = new JLabel(RED_PLAYER + ": " + redPlayer);
-        pantallaJugadorO.setBounds(215, 20, 180, 30);
-        pantallaJugadorO.setFont(new Font("Arial", 1, 14));
-        pantallaJugadorO.setForeground(Color.red);
-        add(pantallaJugadorO);
+        screenRedPlayer = new JLabel(redName + ": " + redPlayer);
+        screenRedPlayer.setBounds(215, 20, 180, 30);
+        screenRedPlayer.setFont(new Font("Arial", 1, 14));
+        screenRedPlayer.setForeground(Color.red);
+        add(screenRedPlayer);
 
-        pantallaJugadorZ = new JLabel(GREEN_PLAYER + ": " + greenPlayer);
-        pantallaJugadorZ.setBounds(215, 40, 180, 30);
-        pantallaJugadorZ.setVisible(players == 3);
-        pantallaJugadorZ.setFont(new Font("Arial", 1, 14));
-        pantallaJugadorZ.setForeground(Color.green);
-        add(pantallaJugadorZ);
+        screenGreenPlayer = new JLabel(greenName + ": " + greenPlayer);
+        screenGreenPlayer.setBounds(215, 40, 180, 30);
+        screenGreenPlayer.setVisible(players == 3);
+        screenGreenPlayer.setFont(new Font("Arial", 1, 14));
+        screenGreenPlayer.setForeground(Color.green);
+        add(screenGreenPlayer);
 
+        //si restart es falso, hubieron cambios para reiniciar la puntuacion
         if (restart) {
-            turno++;
+            turnCounter++;
             whoseTurn = firstTurn;
-            System.out.println("entro aca");
-            
-            if (whoseTurn.equals(BLUE_PLAYER)) {      
-                pantallaTurno.setForeground(Color.blue);
-            } else if (whoseTurn.equals(RED_PLAYER)) {
-                pantallaTurno.setForeground(Color.red);
-            } else if (whoseTurn.equals(GREEN_PLAYER)) {
-                pantallaTurno.setForeground(Color.green);
+
+            if (whoseTurn.equals(blueName)) {
+                screenTurn.setForeground(Color.blue);
+            } else if (whoseTurn.equals(redName)) {
+                screenTurn.setForeground(Color.red);
+            } else if (whoseTurn.equals(greenName)) {
+                screenTurn.setForeground(Color.green);
             }
-            pantallaTurno.setText("Turno de " + whoseTurn);
-            pantallaContTurno.setText("Turno Nro " + turno);
+            screenTurn.setText("Turno de " + whoseTurn);
+            screenTurnCounter.setText("Turno Nro " + turnCounter);
         } else {
             nextTurn();
         }
@@ -197,6 +213,9 @@ public class FrontBoard extends JFrame implements ActionListener {
         header.setBounds(17, 0, columnas * 50, 115);
         add(header);
 
+        if (whoseTurn.equals(botName) && botOn) {
+            bot.play();
+        }
     }
 
     //--------------TABLERO-----------------//
@@ -205,19 +224,19 @@ public class FrontBoard extends JFrame implements ActionListener {
         board = new JLabel[columnas][filas];
 
         int initX = 17;
-        int initY = 80 + filas * 50;
+        int initY = 80 + filas * pixel;
         int y = initY;
 
         for (int i = 0; i < board.length; i++) {
             for (int j = 0; j < board[i].length; j++) {
                 board[i][j] = new JLabel();
                 board[i][j].setIcon(BOARD_SQUARE);
-                board[i][j].setBounds(initX, y, 50, 50);
+                board[i][j].setBounds(initX, y, pixel, pixel);
                 board[i][j].setCursor(cursor);
                 add(board[i][j]);
-                y -= 50;
+                y -= pixel;
             }
-            initX += 50;
+            initX += pixel;
             y = initY;
         }
     }
@@ -227,13 +246,13 @@ public class FrontBoard extends JFrame implements ActionListener {
     public void actionPerformed(ActionEvent e) {
 
         // -- Boton para reiniciar el tablero --
-        if (e.getSource() == reiniciar) {
-            reiniciar(true);
+        if (e.getSource() == buttonReset) {
+            restartBoard(true);
         }
         // -- Boton para modificar el tablero --
-        if (e.getSource() == modificarTablero) {
-            inicio.setRestart(true);
-            inicio.setVisible(true);
+        if (e.getSource() == buttonModify) {
+            settings.setRestart(true);
+            settings.setVisible(true);
             dispose();
         }
     }
@@ -242,17 +261,17 @@ public class FrontBoard extends JFrame implements ActionListener {
     public void obtainToken(int columna, int fila) {
 
         token[tokenCounter].setBounds(17 + columna * 50, 80 + (50 * filas - fila * 50), 50, 50);
-        if (whoseTurn.equals(BLUE_PLAYER)) {
+        if (whoseTurn.equals(blueName)) {
 
             token[tokenCounter].setIcon(BLUE_CIRCLE);
             backBoard.board[columna][rowHeight[columna]] = BLUE_CHAR;
 
-        } else if (whoseTurn.equals(RED_PLAYER)) {
+        } else if (whoseTurn.equals(redName)) {
 
             token[tokenCounter].setIcon(RED_CIRCLE);
             backBoard.board[columna][rowHeight[columna]] = RED_CHAR;
 
-        } else if (whoseTurn.equals(GREEN_PLAYER)) {
+        } else if (whoseTurn.equals(greenName)) {
             token[tokenCounter].setIcon(GREEN_CIRCLE);
             backBoard.board[columna][rowHeight[columna]] = GREEN_CHAR;
         }
@@ -266,35 +285,36 @@ public class FrontBoard extends JFrame implements ActionListener {
     public boolean insertToken(int column) {
         if (rowHeight[column] < filas) {
             // metodo que coloca la imagen de la ficha segun el turno del jugador
-            //tmb en la matriz del backboard
+            //tambien en la matriz del backboard
             obtainToken(column, rowHeight[column]);
 
             // Analizando si ya hubo un ganador
             char ganador = backBoard.checkTokens(columnas, filas);
             if (ganador == BLUE_CHAR) {
-                ganador(ganador);
+                winner(ganador);
                 return false;
             } else if (ganador == RED_CHAR) {
-                ganador(ganador);
+                winner(ganador);
                 return false;
             } else if (ganador == GREEN_CHAR) {
-                ganador(ganador);
+                winner(ganador);
                 return false;
             } else {
                 //si no lo hubo, sigue el juego
                 rowHeight[column]++;
                 nextTurn();
 
-                if (bot != null) {
-                    if (whoseTurn.equals(BOT_PLAYER)) {
+                if (botOn) {
+                    if (whoseTurn.equals(botName)) {
                         bot.play();
                     }
                 }
                 return false;
             }
         } else {
-            if (bot != null && whoseTurn.equals(BOT_PLAYER)) {
-                //no hace nada, sigue intentado hasta que inserte en una columna no llena
+            //En caso de que el bot inserte en una columna llena
+            if (botOn && whoseTurn.equals(botName)) {
+                bot.play();
             } else {
                 JOptionPane.showMessageDialog(null, "Esta columna esta llena.");
             }
@@ -310,93 +330,94 @@ public class FrontBoard extends JFrame implements ActionListener {
             threePlayers();
         }
 
-        pantallaTurno.setText("Turno de " + whoseTurn);
-        pantallaContTurno.setText("Turno Nro " + ++turno);
+        screenTurn.setText("Turno de " + whoseTurn);
+        screenTurnCounter.setText("Turno Nro " + ++turnCounter);
     }
 
     private void twoPlayers() {
-        if (turno == 0) {
+        if (turnCounter == 0) {
             //establece el turno dependiendo si recien comienza la partida
-            if (firstTurn.equals(BLUE_PLAYER)) {
-                firstTurn = RED_PLAYER;
-                whoseTurn = RED_PLAYER;
-                pantallaTurno.setForeground(Color.red);
+            if (firstTurn.equals(blueName)) {
+                firstTurn = redName;
+                whoseTurn = redName;
+                screenTurn.setForeground(Color.red);
 
-            } else if (firstTurn.equals(RED_PLAYER)) {
-                firstTurn = BLUE_PLAYER;
-                whoseTurn = BLUE_PLAYER;
-                pantallaTurno.setForeground(Color.blue);
+            } else if (firstTurn.equals(redName)) {
+                firstTurn = blueName;
+                whoseTurn = blueName;
+                screenTurn.setForeground(Color.blue);
             }
         } else {
             //estable el turno despues de de haber una jugada
-            if (whoseTurn.equals(BLUE_PLAYER)) {
-                whoseTurn = RED_PLAYER;
-                pantallaTurno.setForeground(Color.red);
-            } else if (whoseTurn.equals(RED_PLAYER)) {
-                whoseTurn = BLUE_PLAYER;
-                pantallaTurno.setForeground(Color.blue);
+            if (whoseTurn.equals(blueName)) {  
+                whoseTurn = redName;
+                screenTurn.setForeground(Color.red);
+            } else if (whoseTurn.equals(redName)) {
+                whoseTurn = blueName;
+                screenTurn.setForeground(Color.blue);
             }
 
         }
     }
 
     private void threePlayers() {
-        if (turno == 0) {
+        if (turnCounter == 0) {
             //establece el turno dependiendo si recien comienza la partida
-            if (firstTurn.equals(BLUE_PLAYER)) {
-                firstTurn = RED_PLAYER;
-                whoseTurn = RED_PLAYER;
-                pantallaTurno.setForeground(Color.red);
-            } else if (firstTurn.equals(RED_PLAYER)) {
-                firstTurn = GREEN_PLAYER;
-                whoseTurn = GREEN_PLAYER;
-                pantallaTurno.setForeground(Color.green);
-            } else if (firstTurn.equals(GREEN_PLAYER)) {
-                firstTurn = BLUE_PLAYER;
-                whoseTurn = BLUE_PLAYER;
-                pantallaTurno.setForeground(Color.blue);
+            if (firstTurn.equals(blueName)) {
+                firstTurn = redName;
+                whoseTurn = redName;
+                screenTurn.setForeground(Color.red);
+            } else if (firstTurn.equals(redName)) {
+                firstTurn = greenName;
+                whoseTurn = greenName;
+                screenTurn.setForeground(Color.green);
+            } else if (firstTurn.equals(greenName)) {
+                firstTurn = blueName;
+                whoseTurn = blueName;
+                screenTurn.setForeground(Color.blue);
 
             }
         } else {
             //estable el turno despues de de haber una jugada
-            if (whoseTurn.equals(BLUE_PLAYER)) {
-                whoseTurn = RED_PLAYER;
-                pantallaTurno.setForeground(Color.red);
-            } else if (whoseTurn.equals(RED_PLAYER)) {
-                whoseTurn = GREEN_PLAYER;
-                pantallaTurno.setForeground(Color.green);
-            } else if (whoseTurn.equals(GREEN_PLAYER)) {
-                whoseTurn = BLUE_PLAYER;
-                pantallaTurno.setForeground(Color.blue);
+            if (whoseTurn.equals(blueName)) {
+                whoseTurn = redName;
+                screenTurn.setForeground(Color.red);
+            } else if (whoseTurn.equals(redName)) {
+                whoseTurn = greenName;
+                screenTurn.setForeground(Color.green);
+            } else if (whoseTurn.equals(greenName)) {
+                whoseTurn = blueName;
+                screenTurn.setForeground(Color.blue);
             }
 
         }
-        System.out.println(firstTurn);
-        System.out.println(whoseTurn);
     }
 
     //------------------------------------------------------------------------
     // METODO para reiniciar el tablero segun el ganador
-    private void ganador(char ficha) {
+    private void winner(char ficha) {
         String turnoDe = "";
         String winner = "";
         if (ficha == RED_CHAR) {
-            winner = RED_PLAYER;
+            winner = redName;
         } else if (ficha == BLUE_CHAR) {
-            winner = BLUE_PLAYER;
+            winner = blueName;
         } else if (ficha == GREEN_CHAR) {
-            winner = GREEN_PLAYER;
+            winner = greenName;
         }
 
         turnoDe = nextPlayerAfterWin();
 
+        //colocando las cruces en las fichas que determinaron al ganador
         for (int i = 0; i < winingNeed; i++) {
-            Rectangle bounds = board[BackBoard.column_flag[i]][BackBoard.row_flag[i]].getBounds();
+            Rectangle bounds = board[backBoard.column_flag[i]][backBoard.row_flag[i]].getBounds();
             bounds.setLocation((int) bounds.getX() + 1, (int) bounds.getY());
             cross[i].setBounds(bounds);
         }
 
         JOptionPane.showMessageDialog(header, "Gano jugador " + winner + "\n" + turnoDe);
+
+        //aumentando la puntuacion
         if (ficha == BLUE_CHAR) {
             bluePlayer++;
         } else if (ficha == RED_CHAR) {
@@ -406,24 +427,24 @@ public class FrontBoard extends JFrame implements ActionListener {
         }
 
         match++;
-        reiniciar(false);
+        restartBoard(false);
     }
 
     private String nextPlayerAfterWin() {
         String turn = "";
         if (players == 2) {
-            if (firstTurn.equals(BLUE_PLAYER)) {
-                turn = "Ahora comienza " + RED_PLAYER;
-            } else if (firstTurn.equals(RED_PLAYER)) {
-                turn = "Ahora comienza " + BLUE_PLAYER;
+            if (firstTurn.equals(blueName)) {
+                turn = "Ahora comienza " + redName;
+            } else if (firstTurn.equals(redName)) {
+                turn = "Ahora comienza " + blueName;
             }
         } else {
-            if (firstTurn.equals(BLUE_PLAYER)) {
-                turn = "Ahora comienza  " + RED_PLAYER;
-            } else if (firstTurn.equals(RED_PLAYER)) {
-                turn = "Ahora comienza  " + GREEN_PLAYER;
-            } else if (firstTurn.equals(GREEN_PLAYER)) {
-                turn = "Ahora comienza " + BLUE_PLAYER;
+            if (firstTurn.equals(blueName)) {
+                turn = "Ahora comienza  " + redName;
+            } else if (firstTurn.equals(redName)) {
+                turn = "Ahora comienza  " + greenName;
+            } else if (firstTurn.equals(greenName)) {
+                turn = "Ahora comienza " + blueName;
             }
         }
 
@@ -431,23 +452,40 @@ public class FrontBoard extends JFrame implements ActionListener {
     }
 
     //---------- REINICIAR PANTALLA-----------//
-    private void reiniciar(boolean restart) {
-        FrontBoard front = new FrontBoard(inicio, backBoard, columnas, filas, winingNeed, restart);
-        if (this.bot != null) {
-            Bot bot = new Bot(front, backBoard);
-            front.setBot(bot);
-        }
-        front.setLocationRelativeTo(this);
-        front.setVisible(true);
-        front = null;
+    private void restartBoard(boolean restart) {
+        components(columnas, filas, winingNeed, restart, botOn);
         System.gc();
-        dispose();
+    }
 
+    public void firstMatch() {
+        if (players == 2) {
+            whoseTurn = redName;
+            firstTurn = redName;
+            bluePlayer = 0;
+            redPlayer = 0;
+            greenPlayer = 0;
+            match = 1;
+        } else {
+            whoseTurn = greenName;
+            firstTurn = greenName;
+            bluePlayer = 0;
+            redPlayer = 0;
+            greenPlayer = 0;
+            match = 1;
+        }
     }
 
     //-------------------GETTERS Y SETTERS----------------------------------
     public void setBot(Bot bot) {
         this.bot = bot;
+    }
+
+    public void setBackBoard(BackBoard backBoard) {
+        this.backBoard = backBoard;
+    }
+
+    public void setSettings(Settings settings) {
+        this.settings = settings;
     }
 
     public int getColumnas() {
@@ -458,7 +496,7 @@ public class FrontBoard extends JFrame implements ActionListener {
         return filas;
     }
 
-    public static String getWhoseTurn() {
+    public String getWhoseTurn() {
         return whoseTurn;
     }
 
@@ -466,52 +504,32 @@ public class FrontBoard extends JFrame implements ActionListener {
         return rowHeight;
     }
 
-    public static String getRED_PLAYER() {
-        return RED_PLAYER;
+    public String getRedName() {
+        return redName;
     }
 
-    public static void setRED_PLAYER(String RED_PLAYER) {
-        FrontBoard.RED_PLAYER = RED_PLAYER;
+    public void setRedName(String redName) {
+        this.redName = redName;
     }
 
-    public static String getBLUE_PLAYER() {
-        return BLUE_PLAYER;
+    public String getBlueName() {
+        return blueName;
     }
 
-    public static void setBLUE_PLAYER(String BLUE_PLAYER) {
-        FrontBoard.BLUE_PLAYER = BLUE_PLAYER;
+    public void setBlueName(String blueName) {
+        this.blueName = blueName;
     }
 
-    public static String getGREEN_PLAYER() {
-        return GREEN_PLAYER;
+    public String getGreenName() {
+        return greenName;
     }
 
-    public static void setGREEN_PLAYER(String GREEN_PLAYER) {
-        FrontBoard.GREEN_PLAYER = GREEN_PLAYER;
+    public void setGreenName(String greenName) {
+        this.greenName = greenName;
     }
 
-    public static void setPlayers(int players) {
-        FrontBoard.players = players;
-    }
-
-
-    
-    
-    
-    public static void firstMatch() {
-        if (players == 2) {
-            whoseTurn = RED_PLAYER;
-            firstTurn = RED_PLAYER;
-            bluePlayer = 0;
-            redPlayer = 0;
-            greenPlayer = 0;         
-        } else {
-            whoseTurn = GREEN_PLAYER;
-            firstTurn = GREEN_PLAYER;
-            bluePlayer = 0;
-            redPlayer = 0;
-            greenPlayer = 0;
-        }
+    public void setPlayers(int players) {
+        this.players = players;
     }
 
 }

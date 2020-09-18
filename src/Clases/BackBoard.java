@@ -2,17 +2,20 @@ package Clases;
 
 import java.util.Arrays;
 
+
+
 public class BackBoard {
 
     public char[][] board;
+    // Columnas con Filas -> [c][f]
 
-    public static int column_flag[] = new int[6];
-    public static int row_flag[] = new int[6];
+    public int column_flag[] = new int[6];
+    public int row_flag[] = new int[6];
 
     private int contX;
     private int contO;
     private int contZ;
-    private int ganador;
+    private int tokensNeeded;
 
 
     public BackBoard() {
@@ -139,11 +142,11 @@ public class BackBoard {
                 break;
         }
         // determinar ganador
-        if (contX == ganador) {
+        if (contX == tokensNeeded) {
             return 'X';
-        } else if (contO == ganador) {
+        } else if (contO == tokensNeeded) {
             return 'O';
-        }else if (contZ == ganador) {           
+        }else if (contZ == tokensNeeded) {           
             return 'Z';
         } else {
             return ' ';
@@ -177,9 +180,8 @@ public class BackBoard {
         return board;
     }
 
-    public void setGanador(int ganador) {
-        this.ganador = ganador;
+    public void setTokensNeeded(int tokensNeeded) {
+        this.tokensNeeded = tokensNeeded;
     }
-
-
+    
 }
